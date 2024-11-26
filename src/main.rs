@@ -1,8 +1,11 @@
-use std::{error::Error, fs::read_to_string};
+use std::error::Error;
 
 use clap::{Parser, Subcommand};
 use dotenv::dotenv;
-use env_manage::requester::EnvVar;
+use env_manage::{
+    requester::{create_var, delete_var, get_all_vars, update_var, EnvVar},
+    util::read_lines,
+};
 
 mod env_manage;
 
@@ -47,13 +50,6 @@ enum SubOpArgs {
         value: Option<String>,
     },
 }
-fn read_lines(file_name: &str) -> Vec<String> {
-    read_to_string(file_name)
-        .unwrap()
-        .lines()
-        .map(String::from)
-        .collect()
-}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -73,7 +69,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     match args.op_name {
         SubOpArgs::GetVars => {
             println!("You have chosed to see the vars. Make sure that the ENV file contains the correct access_token and project_id");
-            let get_res = env_manage::requester::get_all_vars(&project_id, &api_token).await?;
+            let get_res = get_all_vars(&project_id, &api_token).await?;
 
             println!("{}", serde_json::to_string_pretty(&get_res).unwrap())
         }
@@ -84,8 +80,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 key_name: key.unwrap(),
                 key_value: value.unwrap(),
             };
-            let create_res =
-                env_manage::requester::create_var(&project_id, &api_token, &env_var).await?;
+            let create_res = create_var(&project_id, &api_token, &env_var).await?;
 
             println!("{}", serde_json::to_string_pretty(&create_res).unwrap())
         }
@@ -101,15 +96,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     key_value: parts[1].to_string(),
                 };
 
-                env_manage::requester::create_var(&project_id, &api_token, &env_var).await?;
+                create_var(&project_id, &api_token, &env_var).await?;
             }
             println!("Env var addition complete");
         }
         SubOpArgs::DeleteVar { key } => {
             println!("Lets delete the provided key: {:?}", key);
 
-            env_manage::requester::delete_var(&project_id, &api_token, key.as_deref().unwrap())
-                .await?;
+            delete_var(&project_id, &api_token, key.as_deref().unwrap()).await?;
 
             println!("Key {:?} deleted successfully", key)
         }
@@ -120,7 +114,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             for ls in lines {
                 let parts: Vec<&str> = ls.split("=").collect();
 
-                env_manage::requester::delete_var(&project_id, &api_token, &parts[0]).await?;
+                delete_var(&project_id, &api_token, &parts[0]).await?;
             }
             println!("Env var deletion complete");
         }
@@ -132,8 +126,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 key_value: value.unwrap(),
             };
 
-            let update_res =
-                env_manage::requester::update_var(&project_id, &api_token, env_var).await?;
+            let update_res = update_var(&project_id, &api_token, env_var).await?;
 
             println!("{}", serde_json::to_string_pretty(&update_res).unwrap());
         }
@@ -149,7 +142,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     key_value: parts[1].to_string(),
                 };
 
-                env_manage::requester::update_var(&project_id, &api_token, &env_var).await?;
+                update_var(&project_id, &api_token, &env_var).await?;
             }
             println!("Env var updation complete");
         }
