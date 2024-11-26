@@ -69,7 +69,7 @@ pub async fn delete_var(
     project_id: &str,
     access_token: &str,
     env_var_name: &str,
-) -> Result<Value, reqwest::Error> {
+) -> Result<(), reqwest::Error> {
     let url = format!(
         "https://gitlab.com/api/v4/projects/{}/variables/{}",
         project_id.to_string(),
@@ -81,15 +81,9 @@ pub async fn delete_var(
 
     headers.insert("PRIVATE-TOKEN", access_token.parse().unwrap());
 
-    let res = client
-        .delete(url)
-        .headers(headers)
-        .send()
-        .await?
-        .json::<serde_json::Value>()
-        .await?;
+    client.delete(url).headers(headers).send().await?;
 
-    Ok(res)
+    Ok(())
 }
 
 pub async fn update_var(
