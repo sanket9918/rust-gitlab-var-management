@@ -1,6 +1,4 @@
-use std::error::Error;
-
-use anyhow::{Context, Result};
+use anyhow::Result;
 use clap::{Parser, Subcommand};
 use dotenv::dotenv;
 use env_manage::{
@@ -11,7 +9,7 @@ use env_manage::{
 mod env_manage;
 
 #[derive(Parser)]
-#[command(version,about,long_about= None)]
+#[command(version="0.1.0",long_about= None,about="A rust based tool to manage Gitlab env variable for a project.")]
 struct Args {
     /// The name of the intended operation to be done
     #[command(subcommand)]
