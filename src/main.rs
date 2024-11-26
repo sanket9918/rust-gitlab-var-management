@@ -1,53 +1,100 @@
 use std::error::Error;
 
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use dotenv::dotenv;
 use env_manage::requester::EnvVar;
 
 mod env_manage;
-#[derive(Parser, Debug)]
+#[derive(Parser)]
 #[command(version,about,long_about= None)]
 struct Args {
-    // Name
-    #[arg(short, long)]
-    name: String,
+    /// The name of the intended operation to be done
+    #[command(subcommand)]
+    op_name: SubOpArgs,
+}
+
+// #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+// enum OpName {
+//
+//     GetVars,
+//
+//     CreateVar,
+//     // DeleteVar,
+//     // UpdateVar,
+// }
+
+#[derive(Subcommand)]
+enum SubOpArgs {
+    /// List down the variables
+    GetVars,
+    ///Create a new variable -> Provide in this format <KEY> <VALUE>
+    CreateVar {
+        key: Option<String>,
+        value: Option<String>,
+    },
+    /// Delete an env var -> Provide in this format <KEY>
+    DeleteVar { key: Option<String> },
+    ///Update the key -> Provide in this format <KEY> <VALUE>
+    UpdateVar {
+        key: Option<String>,
+        value: Option<String>,
+    },
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     dotenv().ok();
 
-    let args = Args::parse();
-
-    println!("Hello {}", args.name);
-
-    let env_var = EnvVar {
-        key_name: String::from(std::env::var("VAR_NAME").expect("VAR_NAME must be set.")),
-        key_value: String::from(std::env::var("VAR_VALUE").expect("VAR_VALUE must be set.")),
-    };
-
+    // Initilize the project deps from the .env file
     let project_id = String::from(std::env::var("PROJECT_ID").expect("PROJECT_ID must be set."));
     let api_token = String::from(std::env::var("API_TOKEN").expect("API_TOKEN must be set."));
 
-    let create_res = env_manage::requester::create_var(&project_id, &api_token, &env_var).await?;
+    // Get the command line args
 
-    println!("Create Response: {:?}", create_res);
-    // Get the env vars
-    let get_res = env_manage::requester::get_all_vars(&project_id, &api_token).await?;
+    let args = Args::parse();
 
-    println!("Get all vars response: {:?}", get_res);
+    // Build the cli matching instructions with the required argumments
+    match args.op_name {
+        SubOpArgs::GetVars => {
+            println!("You have chosed to see the vars. Make sure that the ENV file contains the correct access_token and project_id");
+            let get_res = env_manage::requester::get_all_vars(&project_id, &api_token).await?;
 
-    let env_var1 = EnvVar {
-        key_name: "SANKET1".to_string(),
-        key_value: "MOHAPTRA2".to_string(),
-    };
+            println!("{}", serde_json::to_string_pretty(&get_res).unwrap())
+        }
+        SubOpArgs::CreateVar { key, value } => {
+            println!("Lets start to add the variable in the Gitlab env");
 
-    let update_res = env_manage::requester::update_var(&project_id, &api_token, &env_var1).await?;
-    println!("Get all vars response: {:?}", update_res);
+            let env_var = &EnvVar {
+                key_name: key.unwrap(),
+                key_value: value.unwrap(),
+            };
+            let create_res =
+                env_manage::requester::create_var(&project_id, &api_token, &env_var).await?;
 
-    // let delete_res =
-    //     env_manage::requester::delete_var(&project_id, &api_token, &env_var.key_name).await?;
+            println!("{}", serde_json::to_string_pretty(&create_res).unwrap())
+        }
+        SubOpArgs::DeleteVar { key } => {
+            println!("Lets delete the provided key: {:?}", key);
 
-    // println!("Delete the token added {:?}", delete_res);
+            env_manage::requester::delete_var(&project_id, &api_token, key.as_deref().unwrap())
+                .await?;
+
+            println!("Key {:?} deleted successfully", key)
+        }
+        SubOpArgs::UpdateVar { key, value } => {
+            println!("Lets update the key {:?}", key);
+
+            let env_var = &EnvVar {
+                key_name: key.unwrap(),
+                key_value: value.unwrap(),
+            };
+
+            let update_res =
+                env_manage::requester::update_var(&project_id, &api_token, env_var).await?;
+
+            println!("{}", serde_json::to_string_pretty(&update_res).unwrap());
+        }
+    }
+
     Ok(())
 }
