@@ -2,7 +2,7 @@ use std::error::Error;
 
 use clap::Parser;
 use dotenv::dotenv;
-use env_manage::requester::CreateEnvVar;
+use env_manage::requester::EnvVar;
 
 mod env_manage;
 #[derive(Parser, Debug)]
@@ -21,7 +21,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     println!("Hello {}", args.name);
 
-    let env_var = CreateEnvVar {
+    let env_var = EnvVar {
         key_name: String::from(std::env::var("VAR_NAME").expect("VAR_NAME must be set.")),
         key_value: String::from(std::env::var("VAR_VALUE").expect("VAR_VALUE must be set.")),
     };
@@ -36,5 +36,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let get_res = env_manage::requester::get_all_vars(&project_id, &api_token).await?;
 
     println!("Get all vars response: {:?}", get_res);
+
+    let env_var1 = EnvVar {
+        key_name: "SANKET1".to_string(),
+        key_value: "MOHAPTRA2".to_string(),
+    };
+
+    let update_res = env_manage::requester::update_var(&project_id, &api_token, &env_var1).await?;
+    println!("Get all vars response: {:?}", update_res);
+
+    // let delete_res =
+    //     env_manage::requester::delete_var(&project_id, &api_token, &env_var.key_name).await?;
+
+    // println!("Delete the token added {:?}", delete_res);
     Ok(())
 }
