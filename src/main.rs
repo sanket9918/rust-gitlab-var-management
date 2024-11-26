@@ -1,5 +1,6 @@
 use std::error::Error;
 
+use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use dotenv::dotenv;
 use env_manage::{
@@ -52,7 +53,7 @@ enum SubOpArgs {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+async fn main() -> Result<()> {
     dotenv().ok();
 
     // Initilize the project deps from the .env file
