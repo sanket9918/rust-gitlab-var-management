@@ -39,7 +39,7 @@ pub enum SubOpArgs {
     /// Create Multiple Vars based on the input in a file
     CreateMultipleVars { filename: Option<String> },
     /// Update multiple vars based on the input in a file
-    UpdateMultipleVar { filename: Option<String> },
+    UpdateMultipleVars { filename: Option<String> },
     /// Delete multiple vars based on the input in a file
     DeleteMultipleVars { filename: Option<String> },
     /// Delete an env var -> Provide in this format <KEY>

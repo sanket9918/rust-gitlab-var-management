@@ -22,6 +22,7 @@ pub async fn match_args(
             println!("Lets start to add the variable in the Gitlab env");
 
             let env_var = EnvVar {
+                // Optimise the multiple clone situation -> https://try.direct/blog/how-to-avoid-multiple-clone-in-rust
                 key_name: key.as_deref().unwrap().to_string(),
                 key_value: value.as_deref().unwrap().to_string(),
             };
@@ -75,7 +76,7 @@ pub async fn match_args(
 
             println!("{}", serde_json::to_string_pretty(&update_res).unwrap());
         }
-        SubOpArgs::UpdateMultipleVar { filename } => {
+        SubOpArgs::UpdateMultipleVars { filename } => {
             println!("Lets start to update the variable in the Gitlab env");
             let lines = read_lines(filename.as_deref().unwrap());
 
