@@ -1,7 +1,9 @@
+use futures::{stream, StreamExt};
 use reqwest::Client;
 
 use crate::env_manage::requester::EnvVar;
 use crate::env_manage::util::read_lines;
+use crate::env_manage::CONCURRENCY_LIMIT;
 use crate::SubOpArgs;
 use crate::{create_var, delete_var, get_all_vars, update_var};
 
@@ -34,17 +36,42 @@ pub async fn match_args(
             println!("Lets start to add the variable in the Gitlab env");
             let lines = read_lines(filename.as_deref().unwrap());
 
-            for ls in lines {
-                let parts: Vec<&str> = ls.split("=").collect();
+            let res = stream::iter(lines) // Create a stream of values, here in this case lines of the file
+                .map(|line| {
+                    // we will map each line and move the value (closure will take the ownership of the line)
+                    async move {
+                        // Parse the line and separate out the parts
+                        let parts: Vec<&str> = line.split("=").collect();
 
-                let env_var = &EnvVar {
-                    key_name: parts[0].to_string(),
-                    key_value: parts[1].to_string(),
-                };
+                        let env_var = &EnvVar {
+                            key_name: parts[0].to_string(),
+                            key_value: parts[1].to_string(),
+                        };
+                        create_var(&project_id, &api_token, &env_var, &client).await
+                        // return the result
+                    }
+                })
+                .buffer_unordered(CONCURRENCY_LIMIT);
 
-                create_var(&project_id, &api_token, &env_var, &client).await?;
-            }
-            println!("Env var addition complete");
+            // Sequential flow
+
+            // for ls in lines {
+            //     let parts: Vec<&str> = ls.split("=").collect();
+
+            //     let env_var = &EnvVar {
+            //         key_name: parts[0].to_string(),
+            //         key_value: parts[1].to_string(),
+            //     };
+
+            //     create_var(&project_id, &api_token, &env_var, &client).await?;
+
+            res.for_each(|r| async {
+                match r {
+                    Ok(_) => println!("Env var addition complete"),
+                    Err(e) => eprintln!("Got error {}", e),
+                }
+            })
+            .await;
         }
         SubOpArgs::DeleteVar { key } => {
             println!("Lets delete the provided key: {:?}", key);
@@ -57,12 +84,20 @@ pub async fn match_args(
             println!("Lets start deletion of the variable in the Gitlab env");
             let lines = read_lines(filename.as_deref().unwrap());
 
-            for ls in lines {
-                let parts: Vec<&str> = ls.split("=").collect();
+            let res = stream::iter(lines)
+                .map(|line| async move {
+                    let parts: Vec<&str> = line.split("=").collect();
+                    delete_var(&project_id, &api_token, &parts[0], &client).await
+                })
+                .buffer_unordered(CONCURRENCY_LIMIT);
 
-                delete_var(&project_id, &api_token, &parts[0], &client).await?;
-            }
-            println!("Env var deletion complete");
+            res.for_each(|r| async {
+                match r {
+                    Ok(_) => println!("Env var deletion complete"),
+                    Err(e) => eprintln!("Got error {}", e),
+                }
+            })
+            .await;
         }
         SubOpArgs::UpdateVar { key, value } => {
             println!("Lets update the key {:?}", key);
@@ -80,16 +115,25 @@ pub async fn match_args(
             println!("Lets start to update the variable in the Gitlab env");
             let lines = read_lines(filename.as_deref().unwrap());
 
-            for ls in lines {
-                let parts: Vec<&str> = ls.split("=").collect();
+            let res = stream::iter(lines)
+                .map(|line| async move {
+                    let parts: Vec<&str> = line.split("=").collect();
+                    let env_var = &EnvVar {
+                        key_name: parts[0].to_string(),
+                        key_value: parts[1].to_string(),
+                    };
 
-                let env_var = &EnvVar {
-                    key_name: parts[0].to_string(),
-                    key_value: parts[1].to_string(),
-                };
+                    update_var(&project_id, &api_token, &env_var, &client).await
+                })
+                .buffer_unordered(CONCURRENCY_LIMIT);
+            res.for_each(|r| async {
+                match r {
+                    Ok(_) => println!("Env var updation complete"),
+                    Err(e) => eprintln!("Got error {}", e),
+                }
+            })
+            .await;
 
-                update_var(&project_id, &api_token, &env_var, &client).await?;
-            }
             println!("Env var updation complete");
         }
     }
