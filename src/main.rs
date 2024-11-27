@@ -1,9 +1,9 @@
-use anyhow::Result;
+use anyhow::{Ok, Result};
 use clap::{Parser, Subcommand};
 use dotenv::dotenv;
 use env_manage::{
-    requester::{create_var, delete_var, get_all_vars, update_var, EnvVar},
-    util::read_lines,
+    entrypoint::match_args,
+    requester::{create_var, delete_var, get_all_vars, update_var},
 };
 use reqwest::Client;
 
@@ -28,7 +28,7 @@ struct Args {
 // }
 
 #[derive(Subcommand)]
-enum SubOpArgs {
+pub enum SubOpArgs {
     /// List down the variables
     GetVars,
     ///Create a new variable -> Provide in this format <KEY> <VALUE>
@@ -68,88 +68,7 @@ async fn main() -> Result<()> {
     // Get the client for the http request
     let client = Client::new();
 
-    // Build the cli matching instructions with the required argumments
-    match args.op_name {
-        SubOpArgs::GetVars => {
-            println!("You have chosed to see the vars. Make sure that the ENV file contains the correct access_token and project_id");
-            let get_res = get_all_vars(&project_id, &api_token, &client).await?;
-
-            println!("{}", serde_json::to_string_pretty(&get_res).unwrap())
-        }
-        SubOpArgs::CreateVar { key, value } => {
-            println!("Lets start to add the variable in the Gitlab env");
-
-            let env_var = &EnvVar {
-                key_name: key.unwrap(),
-                key_value: value.unwrap(),
-            };
-            let create_res = create_var(&project_id, &api_token, &env_var, &client).await?;
-
-            println!("{}", serde_json::to_string_pretty(&create_res).unwrap())
-        }
-        SubOpArgs::CreateMultipleVars { filename } => {
-            println!("Lets start to add the variable in the Gitlab env");
-            let lines = read_lines(filename.as_deref().unwrap());
-
-            for ls in lines {
-                let parts: Vec<&str> = ls.split("=").collect();
-
-                let env_var = &EnvVar {
-                    key_name: parts[0].to_string(),
-                    key_value: parts[1].to_string(),
-                };
-
-                create_var(&project_id, &api_token, &env_var, &client).await?;
-            }
-            println!("Env var addition complete");
-        }
-        SubOpArgs::DeleteVar { key } => {
-            println!("Lets delete the provided key: {:?}", key);
-
-            delete_var(&project_id, &api_token, key.as_deref().unwrap(), &client).await?;
-
-            println!("Key {:?} deleted successfully", key)
-        }
-        SubOpArgs::DeleteMultipleVars { filename } => {
-            println!("Lets start deletion of the variable in the Gitlab env");
-            let lines = read_lines(filename.as_deref().unwrap());
-
-            for ls in lines {
-                let parts: Vec<&str> = ls.split("=").collect();
-
-                delete_var(&project_id, &api_token, &parts[0], &client).await?;
-            }
-            println!("Env var deletion complete");
-        }
-        SubOpArgs::UpdateVar { key, value } => {
-            println!("Lets update the key {:?}", key);
-
-            let env_var = &EnvVar {
-                key_name: key.unwrap(),
-                key_value: value.unwrap(),
-            };
-
-            let update_res = update_var(&project_id, &api_token, env_var, &client).await?;
-
-            println!("{}", serde_json::to_string_pretty(&update_res).unwrap());
-        }
-        SubOpArgs::UpdateMultipleVar { filename } => {
-            println!("Lets start to update the variable in the Gitlab env");
-            let lines = read_lines(filename.as_deref().unwrap());
-
-            for ls in lines {
-                let parts: Vec<&str> = ls.split("=").collect();
-
-                let env_var = &EnvVar {
-                    key_name: parts[0].to_string(),
-                    key_value: parts[1].to_string(),
-                };
-
-                update_var(&project_id, &api_token, &env_var, &client).await?;
-            }
-            println!("Env var updation complete");
-        }
-    }
-
+    // Call the function that will match the args and do the suitable ops.
+    match_args(&args.op_name, &project_id, &api_token, &client).await?;
     Ok(())
 }
