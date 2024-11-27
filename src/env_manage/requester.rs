@@ -9,13 +9,16 @@ pub struct EnvVar {
     pub key_value: String,
 }
 
-pub async fn get_all_vars(project_id: &str, access_token: &str) -> Result<Value, reqwest::Error> {
+pub async fn get_all_vars(
+    project_id: &str,
+    access_token: &str,
+    client: &Client,
+) -> Result<Value, reqwest::Error> {
     let url = format!(
         "https://gitlab.com/api/v4/projects/{}/variables",
         project_id.to_string()
     );
 
-    let client = Client::new();
     let mut headers = HeaderMap::new();
 
     headers.insert("PRIVATE-TOKEN", access_token.parse().unwrap());
@@ -35,13 +38,13 @@ pub async fn create_var(
     project_id: &str,
     access_token: &str,
     env_var: &EnvVar,
+    client: &Client,
 ) -> Result<Value, reqwest::Error> {
     let url = format!(
         "https://gitlab.com/api/v4/projects/{}/variables",
         project_id.to_string()
     );
 
-    let client = Client::new();
     let mut headers = HeaderMap::new();
 
     headers.insert("PRIVATE-TOKEN", access_token.parse().unwrap());
@@ -69,6 +72,7 @@ pub async fn delete_var(
     project_id: &str,
     access_token: &str,
     env_var_name: &str,
+    client: &Client,
 ) -> Result<(), reqwest::Error> {
     let url = format!(
         "https://gitlab.com/api/v4/projects/{}/variables/{}",
@@ -76,7 +80,6 @@ pub async fn delete_var(
         env_var_name.to_string()
     );
 
-    let client = Client::new();
     let mut headers = HeaderMap::new();
 
     headers.insert("PRIVATE-TOKEN", access_token.parse().unwrap());
@@ -90,6 +93,7 @@ pub async fn update_var(
     project_id: &str,
     access_token: &str,
     env_var: &EnvVar,
+    client: &Client,
 ) -> Result<Value, reqwest::Error> {
     let url = format!(
         "https://gitlab.com/api/v4/projects/{}/variables/{}",
@@ -97,7 +101,6 @@ pub async fn update_var(
         &env_var.key_name.to_string()
     );
 
-    let client = Client::new();
     let mut headers = HeaderMap::new();
 
     headers.insert("PRIVATE-TOKEN", access_token.parse().unwrap());

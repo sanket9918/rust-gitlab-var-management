@@ -5,6 +5,7 @@ use env_manage::{
     requester::{create_var, delete_var, get_all_vars, update_var, EnvVar},
     util::read_lines,
 };
+use reqwest::Client;
 
 mod env_manage;
 
@@ -64,11 +65,14 @@ async fn main() -> Result<()> {
 
     let args = Args::parse();
 
+    // Get the client for the http request
+    let client = Client::new();
+
     // Build the cli matching instructions with the required argumments
     match args.op_name {
         SubOpArgs::GetVars => {
             println!("You have chosed to see the vars. Make sure that the ENV file contains the correct access_token and project_id");
-            let get_res = get_all_vars(&project_id, &api_token).await?;
+            let get_res = get_all_vars(&project_id, &api_token, &client).await?;
 
             println!("{}", serde_json::to_string_pretty(&get_res).unwrap())
         }
@@ -79,7 +83,7 @@ async fn main() -> Result<()> {
                 key_name: key.unwrap(),
                 key_value: value.unwrap(),
             };
-            let create_res = create_var(&project_id, &api_token, &env_var).await?;
+            let create_res = create_var(&project_id, &api_token, &env_var, &client).await?;
 
             println!("{}", serde_json::to_string_pretty(&create_res).unwrap())
         }
@@ -95,14 +99,14 @@ async fn main() -> Result<()> {
                     key_value: parts[1].to_string(),
                 };
 
-                create_var(&project_id, &api_token, &env_var).await?;
+                create_var(&project_id, &api_token, &env_var, &client).await?;
             }
             println!("Env var addition complete");
         }
         SubOpArgs::DeleteVar { key } => {
             println!("Lets delete the provided key: {:?}", key);
 
-            delete_var(&project_id, &api_token, key.as_deref().unwrap()).await?;
+            delete_var(&project_id, &api_token, key.as_deref().unwrap(), &client).await?;
 
             println!("Key {:?} deleted successfully", key)
         }
@@ -113,7 +117,7 @@ async fn main() -> Result<()> {
             for ls in lines {
                 let parts: Vec<&str> = ls.split("=").collect();
 
-                delete_var(&project_id, &api_token, &parts[0]).await?;
+                delete_var(&project_id, &api_token, &parts[0], &client).await?;
             }
             println!("Env var deletion complete");
         }
@@ -125,7 +129,7 @@ async fn main() -> Result<()> {
                 key_value: value.unwrap(),
             };
 
-            let update_res = update_var(&project_id, &api_token, env_var).await?;
+            let update_res = update_var(&project_id, &api_token, env_var, &client).await?;
 
             println!("{}", serde_json::to_string_pretty(&update_res).unwrap());
         }
@@ -141,7 +145,7 @@ async fn main() -> Result<()> {
                     key_value: parts[1].to_string(),
                 };
 
-                update_var(&project_id, &api_token, &env_var).await?;
+                update_var(&project_id, &api_token, &env_var, &client).await?;
             }
             println!("Env var updation complete");
         }
